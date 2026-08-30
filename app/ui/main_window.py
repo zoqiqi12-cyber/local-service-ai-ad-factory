@@ -144,7 +144,10 @@ class MainWindow(QMainWindow):
     def generate(self) -> None:
         try:
             profile = self._build_profile()
-            assets = VideoAssetImporter().scan_folder(self.asset_folder) if self.asset_folder else []
+            assets = (
+                VideoAssetImporter(vision_provider=self.providers.vision).scan_folder(self.asset_folder)
+                if self.asset_folder else []
+            )
             plans = AdFactoryPipeline(self.providers, history=self._history()).generate_plans(
                 profile,
                 count=self.count.value(),
@@ -232,6 +235,7 @@ class MainWindow(QMainWindow):
         return (
             "Provider："
             f"LLM={'已配置' if status['llm'] else '未配置'} | "
+            f"视觉={'已配置' if status['vision'] else '未配置'} | "
             f"TTS={'已配置' if status['tts'] else '未配置'} | "
             f"AI视频={'已配置' if status['video'] else '未配置'}"
         )
