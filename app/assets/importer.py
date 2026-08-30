@@ -6,22 +6,33 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.assets.analyzer import AssetVisualAnalyzer
+from app.assets.scene_splitter import FFmpegSceneSplitter
+from app.assets.tagger import HeuristicAssetTagger
 from app.models.domain import AssetShot
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 
 
 class VideoAssetImporter:
-    """Scans local video files and converts them into coarse AssetShot records.
+    """Build a shot-level local asset library from raw phone footage.
 
-    V1 uses the full source video as one shot during folder scanning. SceneSplitter
-    can later split it further. Lightweight visual analysis adds quality/motion and
-    a visual fingerprint so matching and de-duplication are less naive.
+    By default each source video is scene-split first, then every shot receives a
+    cheap filename/folder tag pass and lightweight visual scoring/fingerprinting.
+    If scene detection fails, the source video safely falls back to one full-length
+    shot so import does not stop an entire batch.
     """
 
-    def __init__(self, analyze_visuals: bool = True) -> None:
+    def __init__(
+        self,
+        analyze_visuals: bool = True,
+        split_scenes: bool = True,
+        scene_threshold: float = 0.32,
+    ) -> None:
         self.analyze_visuals = analyze_visuals
+        self.split_scenes = split_scenes
         self.analyzer = AssetVisualAnalyzer()
+        self.splitter = FFmpegSceneSplitter(threshold=scene_threshold)
+        self.tagger = HeuristicAssetTagger()
 
     def scan_folder(self, folder: str | Path) -> list[AssetShot]:
         root = Path(folder).expanduser().resolve()
@@ -30,21 +41,37 @@ class VideoAssetImporter:
 
         assets: list[AssetShot] = []
         for path in sorted(root.rglob("*")):
-            if path.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS:
-                duration = self.probe_duration(path)
-                if duration <= 0:
-                    continue
-                asset = AssetShot(
-                    id=f"asset-{uuid4().hex[:12]}",
-                    source_file=str(path),
-                    start=0.0,
-                    end=duration,
-                    quality_score=50,
-                )
+            if not (path.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS):
+                continue
+            duration = self.probe_duration(path)
+            if duration <= 0:
+                continue
+
+            shots = self._split_or_fallback(path, duration)
+            for shot in shots:
+                shot = self.tagger.tag(shot)
                 if self.analyze_visuals:
-                    asset = self.analyzer.analyze(asset)
-                assets.append(asset)
+                    shot = self.analyzer.analyze(shot)
+                assets.append(shot)
         return assets
+
+    def _split_or_fallback(self, path: Path, duration: float) -> list[AssetShot]:
+        if self.split_scenes:
+            try:
+                shots = self.splitter.split(path)
+                if shots:
+                    return shots
+            except (FileNotFoundError, subprocess.CalledProcessError, KeyError, ValueError, json.JSONDecodeError):
+                pass
+        return [
+            AssetShot(
+                id=f"asset-{uuid4().hex[:12]}",
+                source_file=str(path),
+                start=0.0,
+                end=duration,
+                quality_score=50,
+            )
+        ]
 
     @staticmethod
     def probe_duration(path: str | Path) -> float:
