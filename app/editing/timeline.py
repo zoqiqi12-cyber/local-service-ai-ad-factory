@@ -17,9 +17,10 @@ class TimelineBuilder:
         cursor = 0.0
         clips: list[TimelineClip] = []
         pool = [asset.model_copy(deep=True) for asset in assets]
+        selected_assets: list[AssetShot] = []
 
         for req in requirements:
-            asset = self.matcher.best(req, pool)
+            asset = self.matcher.best(req, pool, selected=selected_assets)
             target = min(max(req.min_duration, 1.2), req.max_duration)
 
             if asset is not None and req.preferred_source != "ai":
@@ -37,6 +38,7 @@ class TimelineBuilder:
                     )
                 )
                 cursor += duration
+                selected_assets.append(asset.model_copy(deep=True))
                 for candidate in pool:
                     if candidate.id == asset.id:
                         candidate.used_count += 1
