@@ -17,6 +17,25 @@
 9. QA Agent 检查字幕、品牌一致性、镜头匹配、重复度和不实承诺
 10. Batch Engine 批量输出广告变体
 
+## 当前 V1 已实现
+
+- Business Profile / approved claims 安全约束
+- 10 类广告策略与 Campaign Brain
+- 模板 Script Engine 与地方化 Localizer
+- Script → ShotRequirements 的 Director Engine
+- 本地视频扫描、FFmpeg 场景粗切
+- 基于文件名/目录名的可解释素材标签与广告语义评分
+- 真实素材匹配与 AI 缺失镜头标记
+- AI Video Provider / TTS Provider 等可插拔接口
+- AI pending 镜头生成后自动回填 timeline
+- SRT 字幕生成
+- FFmpeg 9:16 基础渲染
+- 配音 + BGM + 烧录字幕的 Final Composer
+- 一条广告从计划到最终 MP4 的 Execution Engine
+- QA：未授权承诺、AI 未完成、时间轴、重复镜头等
+- PySide6 第一版桌面 UI
+- pytest + GitHub Actions 自动测试
+
 ## V1 聚焦行业
 
 管道疏通：马桶、地漏、洗手池、厨房下水、下水道、主管道。
@@ -42,8 +61,21 @@
 - LLM、TTS、图片和视频模型全部通过 Provider 接口接入，避免绑定单一供应商。
 - 系统目标不是生成一条视频，而是持续生产低重复的广告矩阵。
 
-## V1 开发顺序
+## 本地运行
 
-Business Profile → Campaign Brain → AD DNA → Script Engine → Director Engine → Asset Library → Timeline → FFmpeg Renderer → Provider Interfaces → QA → Batch Generation
+需要 Python 3.12+ 和 FFmpeg。
+
+```bash
+pip install -e .
+python -m app.main
+```
+
+命令行只生成广告计划：
+
+```bash
+python -m app.cli --city 中山市 --count 5 --language 中山口语
+```
+
+没有配置外部 AI Provider 时，系统仍可完成脚本、分镜、真实素材匹配和 timeline；只有确实缺失的镜头会保持 `ai_pending`，不会伪造成已经生成。
 
 详细产品规格见 `docs/PRD.md`。
