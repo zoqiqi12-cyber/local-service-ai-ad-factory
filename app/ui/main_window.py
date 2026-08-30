@@ -141,7 +141,7 @@ class MainWindow(QMainWindow):
         try:
             profile = self._build_profile()
             assets = VideoAssetImporter().scan_folder(self.asset_folder) if self.asset_folder else []
-            plans = AdFactoryPipeline().generate_plans(
+            plans = AdFactoryPipeline(self.providers).generate_plans(
                 profile,
                 count=self.count.value(),
                 duration=self.duration.value(),
@@ -154,6 +154,7 @@ class MainWindow(QMainWindow):
                 "profile": profile.model_dump(mode="json"),
                 "asset_count": len(assets),
                 "provider_status": self.providers.status(),
+                "script_mode": "llm_with_safe_fallback" if self.providers.llm else "local_template",
                 "plans": [plan.model_dump() for plan in plans],
             }
             self.preview.setPlainText(json.dumps(payload, ensure_ascii=False, indent=2))
