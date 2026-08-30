@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         self.output_folder = str(Path("output/ui").resolve())
         self.last_profile: BusinessProfile | None = None
         self.last_plans: list[GeneratedAdPlan] = []
-        self.providers = ProviderRegistry()
+        self.providers = ProviderRegistry.from_env()
 
         self.brand = QLineEdit("示例到家")
         self.city = QLineEdit("中山市")
@@ -57,6 +57,8 @@ class MainWindow(QMainWindow):
         choose_output = QPushButton("选择输出目录")
         choose_output.clicked.connect(self.choose_output)
 
+        reload_providers = QPushButton("重新读取 AI Provider")
+        reload_providers.clicked.connect(self.reload_providers)
         generate = QPushButton("1. 生成广告方案")
         generate.clicked.connect(self.generate)
         execute = QPushButton("2. 生成第1条成片")
@@ -83,6 +85,10 @@ class MainWindow(QMainWindow):
         output_row.addWidget(choose_output)
         output_row.addWidget(self.output_label, 1)
 
+        provider_row = QHBoxLayout()
+        provider_row.addWidget(reload_providers)
+        provider_row.addWidget(self.provider_status, 1)
+
         button_row = QHBoxLayout()
         button_row.addWidget(generate)
         button_row.addWidget(execute)
@@ -91,7 +97,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(form)
         layout.addLayout(asset_row)
         layout.addLayout(output_row)
-        layout.addWidget(self.provider_status)
+        layout.addLayout(provider_row)
         layout.addLayout(button_row)
         layout.addWidget(QLabel("状态 / 生成预览"))
         layout.addWidget(self.preview, 1)
@@ -111,6 +117,10 @@ class MainWindow(QMainWindow):
         if folder:
             self.output_folder = folder
             self.output_label.setText(folder)
+
+    def reload_providers(self) -> None:
+        self.providers = ProviderRegistry.from_env()
+        self.provider_status.setText(self._provider_status_text())
 
     def _build_profile(self) -> BusinessProfile:
         return BusinessProfile(
