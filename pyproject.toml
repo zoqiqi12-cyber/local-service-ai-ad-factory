@@ -11,6 +11,7 @@ dependencies = [
 [project.scripts]
 ad-factory = "app.cli:main"
 ad-factory-ui = "app.ui.main_window:run"
+ad-factory-doctor = "app.doctor:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
