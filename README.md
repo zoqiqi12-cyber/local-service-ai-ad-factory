@@ -43,8 +43,10 @@
 - 批量成片 Batch Execution Engine
 - QA：未授权承诺、AI 未完成、时间轴、重复镜头等
 - PySide6 桌面 UI，已接到计划、素材分析和成片执行
-- 可通过环境变量接入同步 HTTP LLM / Vision / TTS / AI Video 网关
+- App 内“AI服务设置”：可直接填写 LLM / Vision / TTS / AI Video 地址与 API Key
+- API Key 仅保存在本机用户目录，不需要提交 GitHub；环境变量仍可覆盖本地设置
 - Windows 一键启动脚本 + 环境 Doctor
+- Windows PyInstaller 打包工作流
 - pytest + GitHub Actions 自动测试
 
 ## V1 聚焦行业
@@ -78,6 +80,12 @@
 
 第一次：双击 `run_windows.bat`，它会自动创建 `.venv` 并安装项目。之后继续双击同一个文件即可打开桌面 App。
 
+打开 App 后，点 **AI服务设置**，即可填写脚本大模型、视觉模型、配音和 AI 视频服务的地址/API Key。设置保存在：
+
+```text
+%USERPROFILE%\.local_service_ai_ad_factory\settings.json
+```
+
 如果启动有问题，可在项目目录运行：
 
 ```powershell
@@ -101,7 +109,7 @@ python -m app.cli --city 中山市 --count 5 --language 中山口语
 
 ## 接 LLM / Vision / AI 视频 / TTS
 
-V1 支持厂商无关的同步 HTTP 网关合同。API Key 不写进代码，通过环境变量提供。参考 `.env.example`。
+桌面用户优先直接使用 App 内的 **AI服务设置**。服务器或高级用户仍可使用环境变量，参考 `.env.example`；环境变量优先级高于本地设置。
 
 ```bash
 export AD_FACTORY_LLM_URL="https://your-gateway.example/llm"
