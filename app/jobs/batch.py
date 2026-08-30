@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.campaign.history import CampaignHistory
 from app.jobs.execution import AdExecutionEngine, ExecutionResult
 from app.jobs.pipeline import GeneratedAdPlan
 from app.models.domain import BusinessProfile
@@ -32,14 +33,15 @@ class BatchResult:
 
 
 class BatchExecutionEngine:
-    """Execute many ads into isolated output folders.
+    """Execute many ads into isolated output folders."""
 
-    Batch failures are isolated by default so a single bad AI generation does not
-    discard the rest of a 50/100-video job.
-    """
-
-    def __init__(self, providers: ProviderRegistry | None = None) -> None:
+    def __init__(
+        self,
+        providers: ProviderRegistry | None = None,
+        history: CampaignHistory | None = None,
+    ) -> None:
         self.providers = providers or ProviderRegistry()
+        self.history = history
 
     def execute(
         self,
@@ -51,7 +53,7 @@ class BatchExecutionEngine:
     ) -> BatchResult:
         root = Path(output_dir).expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True)
-        engine = AdExecutionEngine(self.providers)
+        engine = AdExecutionEngine(self.providers, history=self.history)
         result = BatchResult()
 
         for index, plan in enumerate(plans, start=1):
