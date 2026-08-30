@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.assets.importer import VideoAssetImporter
+from app.jobs.batch import BatchExecutionEngine
 from app.jobs.execution import AdExecutionEngine
 from app.jobs.pipeline import AdFactoryPipeline, GeneratedAdPlan
 from app.models.domain import BusinessProfile
@@ -63,6 +64,8 @@ class MainWindow(QMainWindow):
         generate.clicked.connect(self.generate)
         execute = QPushButton("2. 生成第1条成片")
         execute.clicked.connect(self.execute_first)
+        execute_all = QPushButton("3. 批量生成全部成片")
+        execute_all.clicked.connect(self.execute_all)
 
         self.provider_status = QLabel(self._provider_status_text())
         self.preview = QTextEdit()
@@ -92,6 +95,7 @@ class MainWindow(QMainWindow):
         button_row = QHBoxLayout()
         button_row.addWidget(generate)
         button_row.addWidget(execute)
+        button_row.addWidget(execute_all)
 
         layout = QVBoxLayout()
         layout.addLayout(form)
@@ -181,13 +185,41 @@ class MainWindow(QMainWindow):
             if result.output_file:
                 QMessageBox.information(self, "成片完成", f"已输出：\n{result.output_file}")
             else:
-                QMessageBox.warning(
-                    self,
-                    "暂未成片",
-                    "当前方案还有缺失 AI 镜头或 Provider 未配置。详情已显示在状态框。",
-                )
+                QMessageBox.warning(self, "暂未成片", "有缺失 AI 镜头或 Provider 未配置，详情见状态框。")
         except Exception as exc:
             QMessageBox.critical(self, "成片失败", str(exc))
+
+    def execute_all(self) -> None:
+        if not self.last_profile or not self.last_plans:
+            QMessageBox.information(self, "请先生成方案", "先点击“生成广告方案”。")
+            return
+        try:
+            result = BatchExecutionEngine(self.providers).execute(
+                profile=self.last_profile,
+                plans=self.last_plans,
+                output_dir=Path(self.output_folder) / "batch",
+            )
+            payload = {
+                "success_count": result.success_count,
+                "failure_count": result.failure_count,
+                "items": [
+                    {
+                        "index": item.index,
+                        "ok": item.ok,
+                        "output_file": item.output_file,
+                        "error": item.error,
+                    }
+                    for item in result.items
+                ],
+            }
+            self.preview.setPlainText(json.dumps(payload, ensure_ascii=False, indent=2))
+            QMessageBox.information(
+                self,
+                "批量任务完成",
+                f"成功 {result.success_count} 条，失败/待补齐 {result.failure_count} 条。",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "批量生成失败", str(exc))
 
     def _provider_status_text(self) -> str:
         status = self.providers.status()
