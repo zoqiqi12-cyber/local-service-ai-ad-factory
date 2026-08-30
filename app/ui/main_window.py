@@ -26,6 +26,7 @@ from app.jobs.execution import AdExecutionEngine
 from app.jobs.pipeline import AdFactoryPipeline, GeneratedAdPlan
 from app.models.domain import BusinessProfile
 from app.providers.registry import ProviderRegistry
+from app.ui.provider_settings import ProviderSettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -37,7 +38,7 @@ class MainWindow(QMainWindow):
         self.output_folder = str(Path("output/ui").resolve())
         self.last_profile: BusinessProfile | None = None
         self.last_plans: list[GeneratedAdPlan] = []
-        self.providers = ProviderRegistry.from_env()
+        self.providers = ProviderRegistry.from_local_settings()
 
         self.brand = QLineEdit("示例到家")
         self.city = QLineEdit("中山市")
@@ -59,7 +60,9 @@ class MainWindow(QMainWindow):
         choose_output = QPushButton("选择输出目录")
         choose_output.clicked.connect(self.choose_output)
 
-        reload_providers = QPushButton("重新读取 AI Provider")
+        configure_providers = QPushButton("AI服务设置")
+        configure_providers.clicked.connect(self.configure_providers)
+        reload_providers = QPushButton("重新读取 AI 服务")
         reload_providers.clicked.connect(self.reload_providers)
         generate = QPushButton("1. 生成广告方案")
         generate.clicked.connect(self.generate)
@@ -90,6 +93,7 @@ class MainWindow(QMainWindow):
         output_row.addWidget(self.output_label, 1)
 
         provider_row = QHBoxLayout()
+        provider_row.addWidget(configure_providers)
         provider_row.addWidget(reload_providers)
         provider_row.addWidget(self.provider_status, 1)
 
@@ -123,8 +127,14 @@ class MainWindow(QMainWindow):
             self.output_folder = folder
             self.output_label.setText(folder)
 
+    def configure_providers(self) -> None:
+        dialog = ProviderSettingsDialog(parent=self)
+        if dialog.exec():
+            self.reload_providers()
+            QMessageBox.information(self, "设置已保存", "AI 服务设置已保存到本机，并已重新加载。")
+
     def reload_providers(self) -> None:
-        self.providers = ProviderRegistry.from_env()
+        self.providers = ProviderRegistry.from_local_settings()
         self.provider_status.setText(self._provider_status_text())
 
     def _history(self) -> CampaignHistory:
