@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.campaign.history import CampaignHistory
 from app.editing.composer import FinalComposer
 from app.jobs.ai_resolver import AIPendingResolver, ResolveReport
 from app.jobs.pipeline import GeneratedAdPlan
@@ -23,15 +24,15 @@ class ExecutionResult:
 
 
 class AdExecutionEngine:
-    """Execute one generated plan all the way to a final MP4.
+    """Execute one generated plan all the way to a final MP4."""
 
-    The engine is provider-agnostic. If the timeline contains AI-pending shots,
-    a VideoProvider must be configured. TTS is optional: without it the result
-    can still be rendered with subtitles only.
-    """
-
-    def __init__(self, providers: ProviderRegistry | None = None) -> None:
+    def __init__(
+        self,
+        providers: ProviderRegistry | None = None,
+        history: CampaignHistory | None = None,
+    ) -> None:
         self.providers = providers or ProviderRegistry()
+        self.history = history
         self.ai_resolver = AIPendingResolver()
         self.qa = AdQAValidator()
         self.composer = FinalComposer()
@@ -108,6 +109,8 @@ class AdExecutionEngine:
             music_file=music_file,
             burn_subtitles=True,
         )
+        if self.history:
+            self.history.record(plan.script, timeline)
         return ExecutionResult(
             output_file=str(final),
             timeline=timeline,
