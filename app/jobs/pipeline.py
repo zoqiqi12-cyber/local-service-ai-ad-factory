@@ -6,6 +6,7 @@ from app.director.engine import DirectorEngine
 from app.editing.timeline import TimelineBuilder
 from app.localizer.engine import Localizer
 from app.models.domain import AdScript, AssetShot, BusinessProfile, ShotRequirement, Timeline
+from app.providers.registry import ProviderRegistry
 from app.script.engine import ScriptEngine
 
 
@@ -24,11 +25,12 @@ class GeneratedAdPlan:
 
 
 class AdFactoryPipeline:
-    """Runnable V1 planning pipeline with no external AI dependency."""
+    """Planning pipeline. Works offline, but uses configured providers when present."""
 
-    def __init__(self) -> None:
+    def __init__(self, providers: ProviderRegistry | None = None) -> None:
+        self.providers = providers or ProviderRegistry()
         self.campaign = CampaignBrain()
-        self.scripts = ScriptEngine()
+        self.scripts = ScriptEngine(llm=self.providers.llm)
         self.localizer = Localizer()
         self.director = DirectorEngine()
         self.timeline = TimelineBuilder()
