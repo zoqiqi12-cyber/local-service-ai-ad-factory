@@ -105,7 +105,7 @@ class TimelineClip(BaseModel):
     source_end: float | None = None
     timeline_start: float
     timeline_end: float
-    source_type: Literal["real", "ai_pending"]
+    source_type: Literal["real", "ai_pending", "ai_generated"]
     generation_prompt: str | None = None
 
 
