@@ -33,7 +33,8 @@
 - 配音 + BGM + 烧录字幕的 Final Composer
 - 一条广告从计划到最终 MP4 的 Execution Engine
 - QA：未授权承诺、AI 未完成、时间轴、重复镜头等
-- PySide6 第一版桌面 UI
+- PySide6 第一版桌面 UI，已接到 Execution Engine
+- 可通过环境变量接入同步 HTTP TTS / AI Video 网关
 - pytest + GitHub Actions 自动测试
 
 ## V1 聚焦行业
@@ -77,5 +78,26 @@ python -m app.cli --city 中山市 --count 5 --language 中山口语
 ```
 
 没有配置外部 AI Provider 时，系统仍可完成脚本、分镜、真实素材匹配和 timeline；只有确实缺失的镜头会保持 `ai_pending`，不会伪造成已经生成。
+
+## 接 AI 视频 / TTS
+
+V1 支持一个厂商无关的同步 HTTP 网关合同。API Key 不写进代码，通过环境变量提供：
+
+```bash
+export AD_FACTORY_TTS_ENDPOINT="https://your-gateway.example/tts"
+export AD_FACTORY_TTS_API_KEY="..."
+export AD_FACTORY_TTS_LANGUAGES="普通话"
+export AD_FACTORY_TTS_DIALECTS="粤语,中山口语"
+
+export AD_FACTORY_VIDEO_ENDPOINT="https://your-gateway.example/video"
+export AD_FACTORY_VIDEO_API_KEY="..."
+export AD_FACTORY_VIDEO_MAX_SECONDS="10"
+```
+
+TTS 网关接收：`text / language / output_format`，返回音频二进制，或 JSON 中的 `file_url/audio_url/url`。
+
+AI Video 网关接收：`prompt / duration / aspect_ratio / output_format`，返回视频二进制，或 JSON 中的 `file_url/video_url/url`。
+
+这样后续无论接哪一家大模型、TTS 或视频模型，都只需要做一个很薄的适配层，不需要重写广告业务逻辑。
 
 详细产品规格见 `docs/PRD.md`。
