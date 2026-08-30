@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.providers.base import ImageProvider, LLMProvider, TTSProvider, VideoProvider
+from app.providers.base import ImageProvider, LLMProvider, TTSProvider, VideoProvider, VisionProvider
 
 
 @dataclass
@@ -13,6 +13,7 @@ class ProviderRegistry:
     tts: TTSProvider | None = None
     image: ImageProvider | None = None
     video: VideoProvider | None = None
+    vision: VisionProvider | None = None
     extras: dict[str, object] = field(default_factory=dict)
 
     @classmethod
@@ -20,11 +21,13 @@ class ProviderRegistry:
         """Create optional vendor-neutral HTTP providers from environment variables."""
         from app.providers.http_adapters import HTTPTTSProvider, HTTPVideoProvider, provider_env
         from app.providers.http_llm import HTTPJSONLLMProvider
+        from app.providers.http_vision import HTTPVisionProvider
 
         registry = cls()
         llm_endpoint = provider_env("AD_FACTORY_LLM_URL")
         tts_endpoint = provider_env("AD_FACTORY_TTS_ENDPOINT")
         video_endpoint = provider_env("AD_FACTORY_VIDEO_ENDPOINT")
+        vision_endpoint = provider_env("AD_FACTORY_VISION_ENDPOINT")
 
         if llm_endpoint:
             registry.llm = HTTPJSONLLMProvider(
@@ -57,6 +60,12 @@ class ProviderRegistry:
                 api_key=provider_env("AD_FACTORY_VIDEO_API_KEY"),
                 max_video_seconds=float(max_seconds_text) if max_seconds_text else None,
             )
+
+        if vision_endpoint:
+            registry.vision = HTTPVisionProvider(
+                endpoint=vision_endpoint,
+                api_key=provider_env("AD_FACTORY_VISION_API_KEY"),
+            )
         return registry
 
     def require_llm(self) -> LLMProvider:
@@ -74,10 +83,16 @@ class ProviderRegistry:
             raise RuntimeError("尚未配置 AI Video Provider")
         return self.video
 
+    def require_vision(self) -> VisionProvider:
+        if self.vision is None:
+            raise RuntimeError("尚未配置 Vision Provider")
+        return self.vision
+
     def status(self) -> dict[str, bool]:
         return {
             "llm": self.llm is not None,
             "tts": self.tts is not None,
             "image": self.image is not None,
             "video": self.video is not None,
+            "vision": self.vision is not None,
         }
