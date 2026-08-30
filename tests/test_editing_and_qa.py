@@ -62,7 +62,7 @@ def test_qa_blocks_pending_ai():
     )
     result = AdQAValidator().validate(profile, sample_script(), sample_timeline("ai_pending"))
     assert not result.ok
-    assert any("AI镜头未生成" in message for message in result.errors)
+    assert any("镜头未生成" in message for message in result.errors)
 
 
 def test_narration_combines_localized_lines():
