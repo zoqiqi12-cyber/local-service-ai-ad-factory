@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.assets.importer import VideoAssetImporter
+from app.campaign.history import CampaignHistory
 from app.jobs.batch import BatchExecutionEngine
 from app.jobs.execution import AdExecutionEngine
 from app.jobs.pipeline import AdFactoryPipeline, GeneratedAdPlan
@@ -126,6 +127,9 @@ class MainWindow(QMainWindow):
         self.providers = ProviderRegistry.from_env()
         self.provider_status.setText(self._provider_status_text())
 
+    def _history(self) -> CampaignHistory:
+        return CampaignHistory(Path(self.output_folder) / "campaign_history.jsonl")
+
     def _build_profile(self) -> BusinessProfile:
         return BusinessProfile(
             brand_name=self.brand.text().strip(),
@@ -141,7 +145,7 @@ class MainWindow(QMainWindow):
         try:
             profile = self._build_profile()
             assets = VideoAssetImporter().scan_folder(self.asset_folder) if self.asset_folder else []
-            plans = AdFactoryPipeline(self.providers).generate_plans(
+            plans = AdFactoryPipeline(self.providers, history=self._history()).generate_plans(
                 profile,
                 count=self.count.value(),
                 duration=self.duration.value(),
@@ -154,7 +158,7 @@ class MainWindow(QMainWindow):
                 "profile": profile.model_dump(mode="json"),
                 "asset_count": len(assets),
                 "provider_status": self.providers.status(),
-                "script_mode": "llm_with_safe_fallback" if self.providers.llm else "local_template",
+                "history_items": len(self._history().recent()),
                 "plans": [plan.model_dump() for plan in plans],
             }
             self.preview.setPlainText(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -169,7 +173,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "请先生成方案", "先点击“生成广告方案”。")
             return
         try:
-            result = AdExecutionEngine(self.providers).execute(
+            result = AdExecutionEngine(self.providers, history=self._history()).execute(
                 profile=self.last_profile,
                 plan=self.last_plans[0],
                 output_dir=Path(self.output_folder) / "video-001",
@@ -195,7 +199,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "请先生成方案", "先点击“生成广告方案”。")
             return
         try:
-            result = BatchExecutionEngine(self.providers).execute(
+            result = BatchExecutionEngine(self.providers, history=self._history()).execute(
                 profile=self.last_profile,
                 plans=self.last_plans,
                 output_dir=Path(self.output_folder) / "batch",
@@ -203,6 +207,7 @@ class MainWindow(QMainWindow):
             payload = {
                 "success_count": result.success_count,
                 "failure_count": result.failure_count,
+                "history_items": len(self._history().recent()),
                 "items": [
                     {
                         "index": item.index,
