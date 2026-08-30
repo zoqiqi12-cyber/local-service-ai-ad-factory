@@ -15,6 +15,7 @@ ad-factory-doctor = "app.doctor:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
+build = ["pyinstaller>=6.10"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
