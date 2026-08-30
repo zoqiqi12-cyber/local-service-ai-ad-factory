@@ -8,6 +8,10 @@ dependencies = [
   "PySide6>=6.7",
 ]
 
+[project.scripts]
+ad-factory = "app.cli:main"
+ad-factory-ui = "app.ui.main_window:run"
+
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 
