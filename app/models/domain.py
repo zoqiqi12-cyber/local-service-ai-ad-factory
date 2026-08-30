@@ -76,3 +76,41 @@ class ShotRequirement(BaseModel):
     min_duration: float = 0.4
     max_duration: float = 2.0
     generation_prompt: str | None = None
+
+
+class AssetShot(BaseModel):
+    id: str
+    source_file: str
+    start: float
+    end: float
+    content_tags: list[str] = Field(default_factory=list)
+    semantic_tags: list[str] = Field(default_factory=list)
+    quality_score: float = 0
+    hook_score: float = 0
+    urgency_score: float = 0
+    proof_score: float = 0
+    result_score: float = 0
+    used_count: int = 0
+
+    @property
+    def duration(self) -> float:
+        return max(0.0, self.end - self.start)
+
+
+class TimelineClip(BaseModel):
+    line_id: str
+    asset_id: str | None = None
+    source_file: str | None = None
+    source_start: float | None = None
+    source_end: float | None = None
+    timeline_start: float
+    timeline_end: float
+    source_type: Literal["real", "ai_pending"]
+    generation_prompt: str | None = None
+
+
+class Timeline(BaseModel):
+    duration: float
+    clips: list[TimelineClip]
+    voice_language: str
+    title: str
