@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 from uuid import uuid4
 
+from app.assets.analyzer import AssetVisualAnalyzer
 from app.models.domain import AssetShot
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
@@ -13,9 +14,14 @@ VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 class VideoAssetImporter:
     """Scans local video files and converts them into coarse AssetShot records.
 
-    V1 uses the full source video as one shot. Later we can replace this with scene
-    detection without changing the AssetShot contract.
+    V1 uses the full source video as one shot during folder scanning. SceneSplitter
+    can later split it further. Lightweight visual analysis adds quality/motion and
+    a visual fingerprint so matching and de-duplication are less naive.
     """
+
+    def __init__(self, analyze_visuals: bool = True) -> None:
+        self.analyze_visuals = analyze_visuals
+        self.analyzer = AssetVisualAnalyzer()
 
     def scan_folder(self, folder: str | Path) -> list[AssetShot]:
         root = Path(folder).expanduser().resolve()
@@ -28,15 +34,16 @@ class VideoAssetImporter:
                 duration = self.probe_duration(path)
                 if duration <= 0:
                     continue
-                assets.append(
-                    AssetShot(
-                        id=f"asset-{uuid4().hex[:12]}",
-                        source_file=str(path),
-                        start=0.0,
-                        end=duration,
-                        quality_score=50,
-                    )
+                asset = AssetShot(
+                    id=f"asset-{uuid4().hex[:12]}",
+                    source_file=str(path),
+                    start=0.0,
+                    end=duration,
+                    quality_score=50,
                 )
+                if self.analyze_visuals:
+                    asset = self.analyzer.analyze(asset)
+                assets.append(asset)
         return assets
 
     @staticmethod
