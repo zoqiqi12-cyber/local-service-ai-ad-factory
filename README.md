@@ -21,20 +21,23 @@
 
 - Business Profile / approved claims 安全约束
 - 10 类广告策略与 Campaign Brain
-- 模板 Script Engine 与地方化 Localizer
+- 模板 Script Engine + 可选 LLM Script Agent；LLM 失败自动回退本地模板
+- LLM 输出强制结构化，并再次过滤未授权卖点和禁用宣传词
+- 地方化 Localizer
 - Script → ShotRequirements 的 Director Engine
 - 本地视频扫描、FFmpeg 场景粗切
 - 基于文件名/目录名的可解释素材标签与广告语义评分
 - 真实素材匹配与 AI 缺失镜头标记
-- AI Video Provider / TTS Provider 等可插拔接口
+- LLM / AI Video / TTS Provider 可插拔接口
 - AI pending 镜头生成后自动回填 timeline
 - SRT 字幕生成
 - FFmpeg 9:16 基础渲染
 - 配音 + BGM + 烧录字幕的 Final Composer
 - 一条广告从计划到最终 MP4 的 Execution Engine
+- 批量成片 Batch Execution Engine
 - QA：未授权承诺、AI 未完成、时间轴、重复镜头等
-- PySide6 第一版桌面 UI，已接到 Execution Engine
-- 可通过环境变量接入同步 HTTP TTS / AI Video 网关
+- PySide6 第一版桌面 UI，已接到 LLM 计划与 Execution Engine
+- 可通过环境变量接入同步 HTTP LLM / TTS / AI Video 网关
 - pytest + GitHub Actions 自动测试
 
 ## V1 聚焦行业
@@ -79,11 +82,14 @@ python -m app.cli --city 中山市 --count 5 --language 中山口语
 
 没有配置外部 AI Provider 时，系统仍可完成脚本、分镜、真实素材匹配和 timeline；只有确实缺失的镜头会保持 `ai_pending`，不会伪造成已经生成。
 
-## 接 AI 视频 / TTS
+## 接 LLM / AI 视频 / TTS
 
-V1 支持一个厂商无关的同步 HTTP 网关合同。API Key 不写进代码，通过环境变量提供：
+V1 支持厂商无关的同步 HTTP 网关合同。API Key 不写进代码，通过环境变量提供：
 
 ```bash
+export AD_FACTORY_LLM_URL="https://your-gateway.example/llm"
+export AD_FACTORY_LLM_API_KEY="..."
+
 export AD_FACTORY_TTS_ENDPOINT="https://your-gateway.example/tts"
 export AD_FACTORY_TTS_API_KEY="..."
 export AD_FACTORY_TTS_LANGUAGES="普通话"
@@ -93,6 +99,8 @@ export AD_FACTORY_VIDEO_ENDPOINT="https://your-gateway.example/video"
 export AD_FACTORY_VIDEO_API_KEY="..."
 export AD_FACTORY_VIDEO_MAX_SECONDS="10"
 ```
+
+LLM 网关接收：`system_prompt / user_prompt / schema`，返回一个 JSON object，或 `{ "result": {...} }`。Script Engine 会验证结构、过滤未授权 claims，并在 Provider 失败或输出不安全时自动回退到本地模板。
 
 TTS 网关接收：`text / language / output_format`，返回音频二进制，或 JSON 中的 `file_url/audio_url/url`。
 
