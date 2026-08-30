@@ -3,6 +3,8 @@ name: build-windows
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
@@ -30,7 +32,8 @@ jobs:
 
           1. 确保电脑安装 FFmpeg 并加入 PATH。
           2. 双击 LocalServiceAIAdFactory.exe。
-          3. AI Provider 通过系统环境变量配置，参考仓库 .env.example。
+          3. AI 服务可直接在软件“AI服务设置”里填写，不需要手动配置系统环境变量。
+          4. 首次使用建议先生成 1 条测试片，再批量生成。
           "@ | Set-Content -Encoding UTF8 dist/LocalServiceAIAdFactory/使用说明.txt
           Copy-Item .env.example dist/LocalServiceAIAdFactory/.env.example
       - uses: actions/upload-artifact@v4
