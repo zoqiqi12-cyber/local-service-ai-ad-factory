@@ -17,20 +17,20 @@ class ProviderRegistry:
 
     @classmethod
     def from_env(cls) -> "ProviderRegistry":
-        """Create optional HTTP providers from environment variables.
-
-        This intentionally uses a small vendor-neutral HTTP contract. API keys
-        stay outside source code and should be provided as environment variables.
-        """
-        from app.providers.http_adapters import (
-            HTTPTTSProvider,
-            HTTPVideoProvider,
-            provider_env,
-        )
+        """Create optional vendor-neutral HTTP providers from environment variables."""
+        from app.providers.http_adapters import HTTPTTSProvider, HTTPVideoProvider, provider_env
+        from app.providers.http_llm import HTTPJSONLLMProvider
 
         registry = cls()
+        llm_endpoint = provider_env("AD_FACTORY_LLM_URL")
         tts_endpoint = provider_env("AD_FACTORY_TTS_ENDPOINT")
         video_endpoint = provider_env("AD_FACTORY_VIDEO_ENDPOINT")
+
+        if llm_endpoint:
+            registry.llm = HTTPJSONLLMProvider(
+                endpoint=llm_endpoint,
+                api_key=provider_env("AD_FACTORY_LLM_API_KEY"),
+            )
 
         if tts_endpoint:
             languages = tuple(
@@ -58,6 +58,11 @@ class ProviderRegistry:
                 max_video_seconds=float(max_seconds_text) if max_seconds_text else None,
             )
         return registry
+
+    def require_llm(self) -> LLMProvider:
+        if self.llm is None:
+            raise RuntimeError("尚未配置 LLM Provider")
+        return self.llm
 
     def require_tts(self) -> TTSProvider:
         if self.tts is None:
