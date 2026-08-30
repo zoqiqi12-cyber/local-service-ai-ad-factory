@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from app.campaign.brain import CampaignBrain
+from app.campaign.history import CampaignHistory
 from app.director.engine import DirectorEngine
 from app.editing.timeline import TimelineBuilder
 from app.localizer.engine import Localizer
@@ -27,8 +29,13 @@ class GeneratedAdPlan:
 class AdFactoryPipeline:
     """Planning pipeline. Works offline, but uses configured providers when present."""
 
-    def __init__(self, providers: ProviderRegistry | None = None) -> None:
+    def __init__(
+        self,
+        providers: ProviderRegistry | None = None,
+        history: CampaignHistory | None = None,
+    ) -> None:
         self.providers = providers or ProviderRegistry()
+        self.history = history
         self.campaign = CampaignBrain()
         self.scripts = ScriptEngine(llm=self.providers.llm)
         self.localizer = Localizer()
@@ -43,7 +50,13 @@ class AdFactoryPipeline:
         language: str = "普通话",
         assets: list[AssetShot] | None = None,
     ) -> list[GeneratedAdPlan]:
-        dnas = self.campaign.build_matrix(profile, count=count, duration=duration)
+        seen = self.history.seen_dna() if self.history else set()
+        dnas = self.campaign.build_matrix(
+            profile,
+            count=count,
+            duration=duration,
+            seen_fingerprints=seen,
+        )
         plans: list[GeneratedAdPlan] = []
         for dna in dnas:
             script = self.scripts.generate(profile, dna, language="普通话")
