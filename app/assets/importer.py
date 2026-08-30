@@ -8,7 +8,9 @@ from uuid import uuid4
 from app.assets.analyzer import AssetVisualAnalyzer
 from app.assets.scene_splitter import FFmpegSceneSplitter
 from app.assets.tagger import HeuristicAssetTagger
+from app.assets.vision_tagger import VisionAssetTagger
 from app.models.domain import AssetShot
+from app.providers.base import VisionProvider
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 
@@ -16,10 +18,9 @@ VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
 class VideoAssetImporter:
     """Build a shot-level local asset library from raw phone footage.
 
-    By default each source video is scene-split first, then every shot receives a
-    cheap filename/folder tag pass and lightweight visual scoring/fingerprinting.
-    If scene detection fails, the source video safely falls back to one full-length
-    shot so import does not stop an entire batch.
+    Pipeline: scene split -> heuristic tags -> visual quality/fingerprint -> optional
+    AI vision understanding. Every expensive stage fails soft so one bad clip cannot
+    stop a 100+ video import.
     """
 
     def __init__(
@@ -27,12 +28,14 @@ class VideoAssetImporter:
         analyze_visuals: bool = True,
         split_scenes: bool = True,
         scene_threshold: float = 0.32,
+        vision_provider: VisionProvider | None = None,
     ) -> None:
         self.analyze_visuals = analyze_visuals
         self.split_scenes = split_scenes
         self.analyzer = AssetVisualAnalyzer()
         self.splitter = FFmpegSceneSplitter(threshold=scene_threshold)
         self.tagger = HeuristicAssetTagger()
+        self.vision_tagger = VisionAssetTagger(vision_provider) if vision_provider else None
 
     def scan_folder(self, folder: str | Path) -> list[AssetShot]:
         root = Path(folder).expanduser().resolve()
@@ -51,7 +54,12 @@ class VideoAssetImporter:
             for shot in shots:
                 shot = self.tagger.tag(shot)
                 if self.analyze_visuals:
-                    shot = self.analyzer.analyze(shot)
+                    try:
+                        shot = self.analyzer.analyze(shot)
+                    except Exception:
+                        pass
+                if self.vision_tagger is not None:
+                    shot = self.vision_tagger.tag(shot)
                 assets.append(shot)
         return assets
 
@@ -76,14 +84,8 @@ class VideoAssetImporter:
     @staticmethod
     def probe_duration(path: str | Path) -> float:
         command = [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "json",
-            str(path),
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "json", str(path),
         ]
         try:
             result = subprocess.run(command, capture_output=True, text=True, check=True)
