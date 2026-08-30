@@ -86,10 +86,14 @@ class AssetShot(BaseModel):
     content_tags: list[str] = Field(default_factory=list)
     semantic_tags: list[str] = Field(default_factory=list)
     quality_score: float = 0
+    motion_score: float = 0
+    stability_score: float = 0
+    sharpness_score: float = 0
     hook_score: float = 0
     urgency_score: float = 0
     proof_score: float = 0
     result_score: float = 0
+    visual_fingerprint: str | None = None
     used_count: int = 0
 
     @property
