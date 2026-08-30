@@ -21,10 +21,16 @@ def test_execution_stops_cleanly_when_ai_video_provider_is_missing(tmp_path):
     result = AdExecutionEngine(ProviderRegistry()).execute(p, plan, tmp_path)
     assert result.output_file is None
     assert not result.qa.ok
-    assert any("AI 镜头未生成" in error for error in result.qa.errors)
+    assert any("镜头未生成" in error for error in result.qa.errors)
     assert any("AI Video Provider" in warning for warning in result.warnings)
 
 
 def test_execution_provider_status_defaults_to_unconfigured():
     status = ProviderRegistry().status()
-    assert status == {"llm": False, "tts": False, "image": False, "video": False}
+    assert status == {
+        "llm": False,
+        "vision": False,
+        "tts": False,
+        "image": False,
+        "video": False,
+    }
