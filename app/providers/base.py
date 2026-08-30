@@ -11,6 +11,7 @@ class ProviderCapabilities:
     max_video_seconds: float | None = None
     supports_image_to_video: bool = False
     supports_text_to_video: bool = False
+    supports_vision: bool = False
 
 
 class LLMProvider(ABC):
@@ -42,4 +43,16 @@ class VideoProvider(ABC):
 class ImageProvider(ABC):
     @abstractmethod
     def generate(self, prompt: str, output_path: str) -> str:
+        raise NotImplementedError
+
+
+class VisionProvider(ABC):
+    """Understands one representative image and returns structured shot metadata."""
+
+    @abstractmethod
+    def capabilities(self) -> ProviderCapabilities:
+        raise NotImplementedError
+
+    @abstractmethod
+    def analyze(self, image_bytes: bytes, prompt: str, schema: dict) -> dict:
         raise NotImplementedError
